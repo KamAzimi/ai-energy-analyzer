@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
+
+<title>AI Energy Analyzer</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family:
+        Inter,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+    background: #080d1a;
+    color: #f3f6ff;
+}
+
+.container {
+    max-width: 1100px;
+    margin: auto;
+    padding: 35px 20px 60px;
+}
+
+.header {
+    margin-bottom: 30px;
+}
+
+.header h1 {
+    font-size: 38px;
+    margin: 0 0 8px;
+}
+
+.header p {
+    color: #9ba8c7;
+    margin: 0;
+    font-size: 16px;
+}
+
+.card {
+    background: #111a2d;
+    border: 1px solid #263453;
+    border-radius: 18px;
+    padding: 22px;
+    margin-bottom: 18px;
+}
+
+textarea {
+    width: 100%;
+    min-height: 140px;
+
+    resize: vertical;
+
+    padding: 16px;
+
+    border-radius: 12px;
+
+    border: 1px solid #344363;
+
+    background: #091122;
+
+    color: white;
+
+    font-size: 16px;
+
+    outline: none;
+}
+
+textarea:focus {
+    border-color: #6685ff;
+}
+
+button {
+    margin-top: 14px;
+
+    padding: 12px 20px;
+
+    border: none;
+
+    border-radius: 10px;
+
+    background: #5d7cff;
+
+    color: white;
+
+    font-size: 15px;
+
+    font-weight: 700;
+
+    cursor: pointer;
+}
+
+button:hover {
+    background: #6e8bff;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.status {
+    margin-left: 15px;
+    color: #a9b5d1;
+}
+
+.simulation-warning {
+    color: #f2ca70;
+
+    background: rgba(242, 202, 112, 0.08);
+
+    border: 1px solid rgba(242, 202, 112, 0.2);
+
+    padding: 12px;
+
+    border-radius: 10px;
+
+    font-size: 13px;
+
+    margin-bottom: 20px;
+}
+
+.metrics {
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, 1fr);
+
+    gap: 12px;
+}
+
+.metric {
+    background: #091122;
+
+    padding: 17px;
+
+    border-radius: 12px;
+}
+
+.metric-label {
+    color: #8f9bb8;
+
+    font-size: 13px;
+}
+
+.metric-value {
+    font-size: 25px;
+
+    font-weight: 700;
+
+    margin-top: 7px;
+}
+
+.chart-container {
+    position: relative;
+
+    height: 420px;
+}
+
+h2 {
+    margin-top: 0;
+}
+
+.share-box {
+    display: none;
+
+    margin-top: 20px;
+
+    background: #091122;
+
+    border-radius: 12px;
+
+    padding: 18px;
+}
+
+.share-box textarea {
+    min-height: 180px;
+}
+
+@media(max-width: 750px) {
+
+    .metrics {
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+
+    .header h1 {
+        font-size: 30px;
+    }
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+
+        <h1>
+            AI Energy Analyzer
+        </h1>
+
+        <p>
+            Real-time GPU power simulation for AI workloads
+        </p>
+
+    </div>
+
+
+    <!-- INPUT -->
+
+    <div class="card">
+
+        <h2>
+            Analyze an AI Message
+        </h2>
+
+        <textarea
+            id="prompt"
+            placeholder="Enter an AI message..."
+        >Explain why a grid-forming inverter maintains stability during an LVRT event.</textarea>
+
+        <br>
+
+        <button
+            id="analyzeButton"
+            onclick="startAnalysis()"
+        >
+            Analyze & Simulate
+        </button>
+
+        <span
+            class="status"
+            id="status"
+        >
+        </span>
+
+    </div>
+
+
+    <!-- WORKLOAD -->
+
+    <div class="card">
+
+        <div class="simulation-warning">
+
+            ⚠ SIMULATION MODE
+
+            <br>
+
+            Power values are modeled estimates.
+            They are not measurements from a physical GPU.
+
+        </div>
+
+        <h2>
+            AI Workload
+        </h2>
+
+        <div class="metrics">
+
+            <div class="metric">
+
+                <div class="metric-label">
+                    Workload
+                </div>
+
+                <div
+                    class="metric-value"
+                    id="workload"
+                >
+                    —
+                </div>
+
+            </div>
+
+
+            <div class="metric">
+
+                <div class="metric-label">
+                    Complexity
+                </div>
+
+                <div
+                    class="metric-value"
+                    id="complexity"
+                >
+                    —
+                </div>
+
+            </div>
+
+
+            <div class="metric">
+
+                <div class="metric-label">
+                    Input Tokens
+                </div>
+
+                <div
+                    class="metric-value"
+                    id="inputTokens"
+                >
+                    —
+                </div>
+
+            </div>
+
+
+            <div class="metric">
+
+                <div class="metric-label">
+                    Output Tokens
+                </div>
+
+                <div
+                    class="metric-value"
+                    id="outputTokens"
+                >
+                    —
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- GRAPH -->
+
+    <div class="card">
+
+        <h2>
+            Simulated GPU Power
+        </h2>
+
+        <div class="chart-container">
+
+            <canvas id="powerChart"></canvas>
+
+        </div>
+
+    </div>
+
+
+    <!-- RESULTS -->
+
+    <div class="card">
+
+        <h2>
+            Energy Results
+        </h2>
+
+        <div class="metrics">
+
+            <div class="metric">
+
+                <div class="metric-label">
+                    Peak Power
+                </div>
+
+                <div
+                    class="metric-value"
+                    id="peakPower"
+                >
+                    —
+                </div>
+
+            </div>
+
+
+            <div class="metric">
+
+                <div class="metric-label">
+                    Average Power
+                </div>
+
+                <div
+                    class="metric-value"
+                    id="averagePower"
+                >
+                    —
+                </div>
+
+            </div>
+
+
+            <div class="metric">
+
+                <div class="metric-label">
+                    Energy
+                </div>
+
+                <div
+                    class="metric-value"
+                    id="energy"
+                >
+                    —
+                </div>
+
+            </div>
+
+
+            <div class="metric">
+
+                <div class="metric-label">
+                    Processing Time
+                </div>
+
+                <div
+                    class="metric-value"
+                    id="processingTime"
+                >
+                    —
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <button
+            id="shareButton"
+            onclick="createShareText()"
+            style="display:none"
+        >
+            Create LinkedIn Share Text
+        </button>
+
+
+        <div
+            class="share-box"
+            id="shareBox"
+        >
+
+            <h3>
+                LinkedIn Post
+            </h3>
+
+            <textarea
+                id="shareText"
+                readonly
+            ></textarea>
+
+            <button
+                onclick="copyShareText()"
+            >
+                Copy
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+let chart;
+
+let finalResults = {};
+
+
+function initializeChart() {
+
+    const ctx =
+        document
+        .getElementById("powerChart")
+        .getContext("2d");
+
+
+    chart = new Chart(
+        ctx,
+        {
+
+            type: "line",
+
+            data: {
+
+                labels: [],
+
+                datasets: [
+
+                    {
+
+                        label:
+                            "GPU Power (W)",
+
+                        data: [],
+
+                        borderWidth: 2,
+
+                        pointRadius: 0,
+
+                        tension: 0.25
+
+                    }
+
+                ]
+
+            },
+
+
+            options: {
+
+                responsive: true,
+
+                maintainAspectRatio: false,
+
+                animation: false,
+
+
+                scales: {
+
+                    x: {
+
+                        title: {
+
+                            display: true,
+
+                            text:
+                                "Time (seconds)"
+
+                        }
+
+                    },
+
+
+                    y: {
+
+                        beginAtZero: true,
+
+                        max: 350,
+
+                        title: {
+
+                            display: true,
+
+                            text:
+                                "GPU Power (W)"
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+        }
+    );
+
+}
+
+
+initializeChart();
+
+
+async function startAnalysis() {
+
+    const prompt =
+        document
+        .getElementById("prompt")
+        .value
+        .trim();
+
+
+    if (!prompt) {
+
+        alert(
+            "Please enter a message."
+        );
+
+        return;
+
+    }
+
+
+    const button =
+        document
+        .getElementById("analyzeButton");
+
+
+    button.disabled = true;
+
+
+    document
+        .getElementById("status")
+        .textContent =
+        "Analyzing message...";
+
+
+    const response =
+        await fetch(
+            "/api/analyze",
+            {
+
+                method: "POST",
+
+                headers: {
+
+                    "Content-Type":
+                        "application/json"
+
+                },
+
+                body:
+                    JSON.stringify({
+                        prompt: prompt
+                    })
+
+            }
+        );
+
+
+    const analysis =
+        await response.json();
+
+
+    document
+        .getElementById("workload")
+        .textContent =
+        analysis.workload + "/100";
+
+
+    document
+        .getElementById("complexity")
+        .textContent =
+        analysis.complexity;
+
+
+    document
+        .getElementById("inputTokens")
+        .textContent =
+        analysis.input_tokens;
+
+
+    document
+        .getElementById("outputTokens")
+        .textContent =
+        analysis.output_tokens;
+
+
+    document
+        .getElementById("status")
+        .textContent =
+        "Simulating GPU...";
+
+
+    chart.data.labels = [];
+
+    chart.data.datasets[0].data = [];
+
+    chart.update();
+
+
+    const duration =
+        analysis.duration;
+
+
+    const samples =
+        Math.ceil(
+            duration * 10
+        );
+
+
+    const dt =
+        duration / samples;
+
+
+    let powerValues = [];
+
+    let totalEnergyWh = 0;
+
+    let peakPower = 0;
+
+
+    for (
+        let i = 0;
+        i < samples;
+        i++
+    ) {
+
+        const t =
+            i * dt;
+
+
+        const normalizedTime =
+            t / duration;
+
+
+        /*
+         * Approximate GPU workload profile:
+         *
+         * 0–15%:
+         *   Prefill / ramp-up
+         *
+         * 15–82%:
+         *   High compute / generation
+         *
+         * 82–100%:
+         *   Response completion / ramp-down
+         */
+
+
+        let stageFactor;
+
+
+        if (
+            normalizedTime < 0.15
+        ) {
+
+            stageFactor =
+                0.4 +
+                (
+                    normalizedTime /
+                    0.15
+                ) *
+                0.5;
+
+        }
+
+        else if (
+            normalizedTime < 0.82
+        ) {
+
+            stageFactor =
+                0.82 +
+                0.12 *
+                Math.sin(
+                    normalizedTime * 30
+                ) +
+                0.05 *
+                Math.sin(
+                    normalizedTime * 90
+                );
+
+        }
+
+        else {
+
+            stageFactor =
+                0.85 *
+                (
+                    1 -
+                    (
+                        normalizedTime -
+                        0.82
+                    ) /
+                    0.18
+                );
+
+        }
+
+
+        /*
+         * Simulated GPU power model.
+         */
+
+        const idlePower =
+            45;
+
+
+        const computePower =
+            analysis.workload *
+            2.35 *
+            stageFactor;
+
+
+        const randomVariation =
+            (
+                Math.random() -
+                0.5
+            ) * 8;
+
+
+        let power =
+            idlePower +
+            computePower +
+            randomVariation;
+
+
+        power =
+            Math.max(
+                45,
+                Math.min(
+                    320,
+                    power
+                )
+            );
+
+
+        powerValues.push(power);
+
+
+        peakPower =
+            Math.max(
+                peakPower,
+                power
+            );
+
+
+        /*
+         * Energy:
+         *
+         * E = integral P(t)dt
+         *
+         * Convert W·s to Wh.
+         */
+
+        totalEnergyWh +=
+            power *
+            dt /
+            3600;
+
+
+        chart.data.labels.push(
+            t.toFixed(1)
+        );
+
+
+        chart.data.datasets[0]
+            .data
+            .push(
+                Number(
+                    power.toFixed(2)
+                )
+            );
+
+
+        chart.update();
+
+
+        await sleep(
+            dt * 1000
+        );
+
+    }
+
+
+    const averagePower =
+        powerValues.reduce(
+            (sum, value) =>
+                sum + value,
+            0
+        ) /
+        powerValues.length;
+
+
+    document
+        .getElementById("peakPower")
+        .textContent =
+        peakPower.toFixed(1)
+        + " W";
+
+
+    document
+        .getElementById("averagePower")
+        .textContent =
+        averagePower.toFixed(1)
+        + " W";
+
+
+    document
+        .getElementById("energy")
+        .textContent =
+        totalEnergyWh.toFixed(4)
+        + " Wh";
+
+
+    document
+        .getElementById("processingTime")
+        .textContent =
+        duration.toFixed(2)
+        + " s";
+
+
+    finalResults = {
+
+        workload:
+            analysis.workload,
+
+        peakPower:
+            peakPower,
+
+        averagePower:
+            averagePower,
+
+        energy:
+            totalEnergyWh,
+
+        duration:
+            duration
+
+    };
+
+
+    document
+        .getElementById("status")
+        .textContent =
+        "Simulation complete";
+
+
+    document
+        .getElementById("shareButton")
+        .style.display =
+        "inline-block";
+
+
+    button.disabled = false;
+
+}
+
+
+function sleep(milliseconds) {
+
+    return new Promise(
+        resolve =>
+            setTimeout(
+                resolve,
+                milliseconds
+            )
+    );
+
+}
+
+
+function createShareText() {
+
+    const result = finalResults;
+
+
+    const text =
+
+`I analyzed an AI request using an AI Energy Analyzer.
+
+🧠 AI Workload: ${result.workload}/100
+
+⚡ Simulated Peak GPU Power:
+${result.peakPower.toFixed(1)} W
+
+📊 Simulated Average GPU Power:
+${result.averagePower.toFixed(1)} W
+
+🔋 Simulated Energy:
+${result.energy.toFixed(4)} Wh
+
+⏱ Processing Time:
+${result.duration.toFixed(2)} seconds
+
+This is a simulated GPU power profile, not a physical GPU measurement.
+
+#AI #GPU #Energy #PowerSystems #Sustainability`;
+
+
+    document
+        .getElementById("shareText")
+        .value =
+        text;
+
+
+    document
+        .getElementById("shareBox")
+        .style.display =
+        "block";
+
+}
+
+
+function copyShareText() {
+
+    const text =
+        document
+        .getElementById("shareText");
+
+
+    navigator
+        .clipboard
+        .writeText(
+            text.value
+        );
+
+
+    alert(
+        "LinkedIn text copied."
+    );
+
+}
+
+</script>
+
+</body>
+
+</html>
